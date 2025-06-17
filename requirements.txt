@@ -1,9 +1,9 @@
 Flask
 requests
-torch
-transformers
 sentence-transformers
-faiss-cpu==1.10.0
 scikit-learn
-matplotlib
+faiss-cpu==1.10.0
 gunicorn
+matplotlib
+numpy
+

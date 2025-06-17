@@ -1,47 +1,27 @@
-import torch
+# embed.py
+
 import numpy as np
-from transformers import AutoTokenizer, AutoModel
-from typing import Union, List
+from sentence_transformers import SentenceTransformer
 
-class TextEmbedder:
-    def __init__(self, model_name: str = "intfloat/multilingual-e5-large", device: str = None):
-        if device is None:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = torch.device(device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name).to(self.device).eval()
+# Global model instance
+_model = None
 
-    def _average_pool(self, hidden_states, attention_mask):
-        mask = attention_mask.unsqueeze(-1).bool()
-        token_embeddings = hidden_states.masked_fill(~mask, 0.0)
-        summed = token_embeddings.sum(dim=1)
-        counts = attention_mask.sum(dim=1).unsqueeze(-1)
-        return summed / counts
+def get_batch_embeddings(texts: list[str], batch_size: int = 32) -> np.ndarray:
+    """
+    Generate embeddings for a list of texts using the
+    sentence-transformers all-MiniLM-L6-v2 model.
+    """
+    global _model
+    if _model is None:
+        print("Loading sentence-transformers/all-MiniLM-L6-v2...")
+        _model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    def embed(self, texts: Union[str, List[str]], max_length: int = 512) -> np.ndarray:
-        if isinstance(texts, str):
-            texts = [texts]
-        inputs = [f"query: {t}" for t in texts]
-        enc = self.tokenizer(
-            inputs, padding=True, truncation=True,
-            max_length=max_length, return_tensors="pt"
-        )
-        enc = {k: v.to(self.device) for k, v in enc.items()}
-        with torch.no_grad():
-            out = self.model(**enc)
-            pooled = self._average_pool(out.last_hidden_state, enc["attention_mask"])
-            normalized = torch.nn.functional.normalize(pooled, p=2, dim=1)
-        return normalized.cpu().numpy()
+    # Encode all texts in one go (with a progress bar)
+    embeddings = _model.encode(
+        texts,
+        batch_size=batch_size,
+        show_progress_bar=True,
+        convert_to_numpy=True
+    )
+    return embeddings
 
-_embedder: TextEmbedder = None
-
-def get_batch_embeddings(texts: List[str], max_length: int = 512, batch_size: int = 32) -> np.ndarray:
-    global _embedder
-    if _embedder is None:
-        _embedder = TextEmbedder()
-    embs = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i+batch_size]
-        embs.append(_embedder.embed(batch, max_length))
-    return np.vstack(embs)
