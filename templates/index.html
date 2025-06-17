@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <!-- Title -->
+  <h2 class="mb-3 text-center">News Cluster Explorer</h2>
+
+  <!-- Date picker & Load button -->
+  <form class="row justify-content-center g-2 mb-4" method="get" action="/">
+    <div class="col-auto">
+      <input
+        class="form-control"
+        type="date"
+        name="date"
+        value="{{ date }}"
+        max="{{ date }}"
+      >
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary" type="submit">Load</button>
+    </div>
+  </form>
+
+  <!-- Search box -->
+  <div class="mb-4">
+    <input
+      id="search-box"
+      class="form-control"
+      type="text"
+      placeholder="Search clusters or articles…"
+    >
+  </div>
+
+  {% if clusters %}
+    <div class="row">
+      {% for cluster in clusters %}
+        <div class="col-md-6 mb-4">
+          <div class="card shadow-sm">
+
+            <!-- Collapsible header -->
+            <div
+              class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+              role="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#cluster-{{ cluster.id }}"
+              aria-expanded="true"
+              aria-controls="cluster-{{ cluster.id }}"
+            >
+              <div>
+                Cluster {{ loop.index }}: {{ cluster.size }} articles
+                <span class="badge bg-light text-dark ms-2">{{ cluster.percentage }}%</span>
+              </div>
+              <i class="bi bi-chevron-down chevron-rotate"></i>
+            </div>
+
+            <!-- Collapsible list -->
+            <div id="cluster-{{ cluster.id }}" class="collapse show">
+              <ul class="list-group list-group-flush">
+                {% for art in cluster.articles %}
+                  <li class="list-group-item">
+                    <a href="{{ art.url }}" target="_blank">{{ art.title }}</a><br>
+                    <small class="text-muted">{{ art.source }} • {{ art.published }}</small>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No articles found for {{ date }}.</p>
+  {% endif %}
+
+  <!-- Chevron rotation & search/filter script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Rotate chevrons
+      document.querySelectorAll('.card-header').forEach(header => {
+        const icon = header.querySelector('.chevron-rotate');
+        const target = document.querySelector(header.getAttribute('data-bs-target'));
+        if (target && !target.classList.contains('show')) {
+          icon.classList.add('collapsed');
+        }
+        header.addEventListener('click', () => {
+          setTimeout(() => icon.classList.toggle('collapsed'), 200);
+        });
+      });
+
+      // Live search/filter
+      const box = document.getElementById('search-box');
+      const cards = Array.from(document.querySelectorAll('.card'));
+      box.addEventListener('input', () => {
+        const q = box.value.trim();
+        cards.forEach(card => {
+          const headerText = card.querySelector('.card-header').textContent || '';
+          const titles = Array.from(card.querySelectorAll('.list-group-item a'))
+                              .map(a => a.textContent || '');
+          const show = q === "" ||
+                       headerText.includes(q) ||
+                       titles.some(t => t.includes(q));
+          card.closest('.col-md-6').style.display = show ? '' : 'none';
+        });
+      });
+    });
+  </script>
+{% endblock %}
