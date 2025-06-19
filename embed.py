@@ -1,5 +1,4 @@
 # embed.py
-
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
@@ -9,12 +8,12 @@ _model = None
 def get_batch_embeddings(texts: list[str], batch_size: int = 32) -> np.ndarray:
     """
     Generate embeddings for a list of texts using
-    the tiny paraphrase-albert-small-v2 model.
+    the intfloat/multilingual-e5-large model.
     """
     global _model
     if _model is None:
-        print("Loading paraphrase-albert-small-v2…")
-        _model = SentenceTransformer('paraphrase-albert-small-v2')
+        print("Loading intfloat/multilingual-e5-large…")
+        _model = SentenceTransformer('intfloat/multilingual-e5-large')
 
     embeddings = _model.encode(
         texts,
@@ -23,3 +22,4 @@ def get_batch_embeddings(texts: list[str], batch_size: int = 32) -> np.ndarray:
         convert_to_numpy=True
     )
     return embeddings
+
